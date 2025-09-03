@@ -1,0 +1,14 @@
+# Python bytecode and cache
+__pycache__/
+
+# Virtualenvs
+venv/
+
+# Django SQLite database
+db.sqlite3
+
+
+
+
+
+
