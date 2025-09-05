@@ -8,6 +8,13 @@ from rest_framework.response import Response
 from rest_framework import permissions, status
 from .serializers import RegisterSerializer, VerifySerializer, LoginSerializer
 from rest_framework.decorators import api_view, permission_classes
+from drf_yasg.utils import swagger_auto_schema 
+import uuid
+
+from django.shortcuts import render
+
+def home(request):
+    return render(request, "auth.html")
 
 User = get_user_model()
 
@@ -16,7 +23,8 @@ def generate_otp():
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
-
+    
+    @swagger_auto_schema(request_body=RegisterSerializer)         
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -25,7 +33,9 @@ class RegisterView(APIView):
             if User.objects.filter(email=email).exists():
                 return Response({"detail": "User already exists"}, status=400)
             otp = generate_otp()
-            user = User(email=email, is_active=False, is_verified=False, otp=otp)
+            username = f"user_{uuid.uuid4().hex[:8]}"  
+
+            user = User(username=username, email=email, is_active=False, is_verified=False, otp=otp)
             user.set_password(password)
             user.save()
             send_mail(
@@ -41,6 +51,7 @@ class RegisterView(APIView):
 class VerifyView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    @swagger_auto_schema(request_body=VerifySerializer)         
     def post(self, request):
         serializer = VerifySerializer(data=request.data)
         if serializer.is_valid():
@@ -61,7 +72,8 @@ class VerifyView(APIView):
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
-
+    
+    @swagger_auto_schema(request_body=LoginSerializer)         
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():

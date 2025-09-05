@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth Test UI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: white;
+      margin-top: 30px;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 500px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      cursor: pointer;
+      background: #ecf0f1;
+      border-radius: 8px;
+      margin: 2px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .tab.active {
+      background: #3498db;
+      color: white;
+    }
+
+    .section {
+      display: none;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: 0.3s ease;
+    }
+
+    input:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.4);
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #3498db;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 5px;
+      transition: 0.3s ease;
+    }
+
+    button:hover {
+      background: #2980b9;
+      transform: scale(1.02);
+    }
+
+    .logout-btn {
+      background: #e74c3c;
+    }
+
+    .result {
+      background: #f3f3f3;
+      padding: 12px;
+      margin-top: 15px;
+      border-radius: 8px;
+      min-height: 50px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: monospace;
+    }
+
+    .success { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Auth Test</h1>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showSection('register')">Register</div>
+      <div class="tab" onclick="showSection('verify')">Verify</div>
+      <div class="tab" onclick="showSection('login')">Login</div>
+      <div class="tab" onclick="showSection('actions')">Actions</div>
+    </div>
+
+    <div id="register" class="section active">
+      <input type="email" id="reg_email" placeholder="Email">
+      <input type="password" id="reg_password" placeholder="Password">
+      <button onclick="register()">Register</button>
+    </div>
+
+    <div id="verify" class="section">
+      <input type="email" id="verify_email" placeholder="Email">
+      <input type="text" id="verify_otp" placeholder="OTP">
+      <button onclick="verify()">Verify</button>
+    </div>
+
+    <div id="login" class="section">
+      <input type="email" id="login_email" placeholder="Email">
+      <input type="password" id="login_password" placeholder="Password">
+      <button onclick="login()">Login</button>
+    </div>
+
+    <div id="actions" class="section">
+      <button onclick="getMe()">Get Me</button>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+
+    <div class="result" id="output">Result will appear here...</div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelector(`.tab[onclick*="${id}"]`).classList.add('active');
+    }
+
+    function updateOutput(text, success = true) {
+      const output = document.getElementById("output");
+      output.textContent = text;
+      output.className = success ? "result success" : "result error";
+    }
+
+    async function getCsrfToken() {
+      const res = await fetch("/api/get_csrf/", { credentials: "include" });
+      const data = await res.json();
+      return data.csrftoken;
+    }
+
+    async function register() {
+      const csrftoken = await getCsrfToken();
+      const email = document.getElementById("reg_email").value;
+      const password = document.getElementById("reg_password").value;
+
+      const res = await fetch("/api/register/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+        credentials: "include",
+        body: JSON.stringify({ email, password })
+      });
+
+      const text = await res.text();
+      if (res.ok) {
+        updateOutput("✅ Registered successfully. Check email for OTP.", true);
+        showSection("verify"); // auto move to Verify tab
+        document.getElementById("verify_email").value = email;
+      } else {
+        updateOutput(text, false);
+      }
+    }
+
+    async function verify() {
+      const csrftoken = await getCsrfToken();
+      const email = document.getElementById("verify_email").value;
+      const otp = document.getElementById("verify_otp").value;
+
+      const res = await fetch("/api/register/verify/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+        credentials: "include",
+        body: JSON.stringify({ email, otp })
+      });
+
+      const text = await res.text();
+      if (res.ok) {
+        updateOutput("✅ Email verified successfully.", true);
+        showSection("login"); // auto move to Login tab
+        document.getElementById("login_email").value = email;
+      } else {
+        updateOutput(text, false);
+      }
+    }
+
+    async function login() {
+      const csrftoken = await getCsrfToken();
+      const email = document.getElementById("login_email").value;
+      const password = document.getElementById("login_password").value;
+
+      const res = await fetch("/api/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+        credentials: "include",
+        body: JSON.stringify({ email, password })
+      });
+
+      const text = await res.text();
+      if (res.ok) {
+        updateOutput("✅ Logged in successfully.", true);
+        showSection("actions"); // auto move to Actions tab
+      } else {
+        updateOutput(text, false);
+      }
+    }
+
+    async function getMe() {
+      const res = await fetch("/api/me/", { credentials: "include" });
+      updateOutput(await res.text(), res.ok);
+    }
+
+    async function logout() {
+      const csrftoken = await getCsrfToken();
+      const res = await fetch("/api/logout/", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrftoken },
+        credentials: "include"
+      });
+
+      const text = await res.text();
+      if (res.ok) {
+        updateOutput("✅ Logged out successfully.", true);
+        showSection("login");
+      } else {
+        updateOutput(text, false);
+      }
+    }
+  </script>
+</body>
+</html>
